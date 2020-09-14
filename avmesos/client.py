@@ -317,6 +317,7 @@ class MesosClient(object):
     def __init__(
             self,
             mesos_urls,
+            thread=True,
             frameworkId=None,
             frameworkName='Mesos HTTP framework',
             frameworkUser='root',
@@ -357,6 +358,7 @@ class MesosClient(object):
         self.streamId = None
         self.logger = logging.getLogger(__name__)
         self.stop = False
+        self.thread = thread
         self.disconnect = False
         self.callbacks = {
             MesosClient.SUBSCRIBED: [],
@@ -606,7 +608,6 @@ class MesosClient(object):
         return mesos_master
 
     def __register(self):
-        python_version = sys.version_info.major
         headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
@@ -720,6 +721,14 @@ class MesosClient(object):
             self.__event_reconnected()
             self.disconnected = False
 
+        if self.thread == True:
+            self.__event_loop()
+        
+        if self.thread == False:
+            self.__event_single()
+
+    def __event_loop(self):
+        python_version = sys.version_info.major        
         first_line = True
         for line in self.long_pool.iter_lines():
             if self.stop or self.disconnect:
@@ -793,6 +802,68 @@ class MesosClient(object):
 
                 if line[count_bytes:]:
                     count_bytes = int(line[count_bytes:])
+        return True
+
+    def __event_single(self):
+        python_version = sys.version_info.major        
+        body = self.long_pool.json()
+
+        self.logger.debug('Mesos:Event:%s' % (str(body['type'])))
+        self.logger.debug('Mesos:Message:' + str(body))
+        if body['type'] == 'SUBSCRIBED':
+            self.frameworkId = body['subscribed']['framework_id']['value']
+            self.logger.info(
+                'Mesos:Subscribe:Framework-Id:' + self.frameworkId
+            )
+            self.logger.info(
+                'Mesos:Subscribe:Stream-Id:' + self.streamId
+            )
+            if 'master_info' in body['subscribed']:
+                self.master_info = body['subscribed']['master_info']
+            self.__event_subscribed()
+        elif body['type'] == 'OFFERS':
+            mesos_offers = body['offers']['offers']
+            offers = []
+            for mesos_offer in mesos_offers:
+                offers.append(
+                    Offer(
+                        self.mesos_url,
+                        frameworkId=self.frameworkId,
+                        streamId=self.streamId,
+                        mesosOffer=mesos_offer,
+                        requests_auth=self.requests_auth,
+                        verify=self.verify
+                    )
+                )
+            self.__event_offers(offers)
+        elif body['type'] == 'UPDATE':
+            mesos_update = body['update']
+            update_event = Update(
+                self.mesos_url,
+                frameworkId=self.frameworkId,
+                streamId=self.streamId,
+                mesosUpdate=mesos_update,
+                requests_auth=self.requests_auth,
+                verify=self.verify 
+            )
+            update_event.ack()
+            self.__event_update(mesos_update)
+        elif body['type'] == 'ERROR':
+            self.logger.error('Mesos:Error:' + body['error']['message'])
+            self.__event_error(body['error']['message'])
+        elif body['type'] == 'RESCIND':
+            self.__event_callback(body['type'], body['rescind'])
+        elif body['type'] == 'MESSAGE':
+            self.__event_callback(body['type'], body['message'])
+        elif body['type'] == 'FAILURE':
+            self.__event_callback(body['type'], body['failure'])
+        elif body['type'] == 'HEARTBEAT':
+            self.logger.debug('Mesos:Heartbeat')
+        else:
+            self.logger.warn(
+                '%s event no yet implemented' % (str(body['type']))
+            )    
+
         return True
 
     def combine_offers(self, offers, operations, options=None):
