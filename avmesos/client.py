@@ -7,12 +7,11 @@ import sys
 import requests
 from requests.exceptions import ConnectionError
 
-from mesoshttp.acs import DCOSServiceAuth
-
-from mesoshttp.offers import Offer
-from mesoshttp.core import CoreMesosObject
-from mesoshttp.exception import MesosException
-from mesoshttp.update import Update
+from avmesos.acs import DCOSServiceAuth
+from avmesos.offers import Offer
+from avmesos.core import CoreMesosObject
+from avmesos.exception import MesosException
+from avmesos.update import Update
 
 from kazoo.client import KazooClient
 

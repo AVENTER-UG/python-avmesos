@@ -21,11 +21,11 @@ except UnicodeDecodeError:
 
 
 config = {
-    'description': 'mesoshttp',
-    'author': 'Andreas Peters',
+    'description': 'Mesos HTTP lib',
+    'author': 'AVENTER UG (haftungsbeschraenkt)',
     'author_email': 'support@aventer.biz',
     'download_url': 'https://git.aventer.biz/AVENTER/python-mesos-http',
-    'version': '0.3.2',
+    'version': '0.3.3',
      'classifiers': [
         # How mature is this project? Common values are
         #   3 - Alpha
@@ -56,7 +56,7 @@ config = {
     'packages': find_packages(),
     'include_package_data': True,
     'scripts': [],
-    'name': 'mesoshttp',
+    'name': 'avmesos',
 }
 
 setup(**config)
