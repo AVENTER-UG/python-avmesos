@@ -22,9 +22,9 @@ except UnicodeDecodeError:
 
 config = {
     'description': 'mesoshttp',
-    'author': 'Olivier Sallou',
-    'author_email': 'olivier.sallou@irisa.fr',
-    'download_url': 'https://github.com/osallou/python-mesos-http',
+    'author': 'Andreas Peters',
+    'author_email': 'support@aventer.biz',
+    'download_url': 'https://git.aventer.biz/AVENTER/python-mesos-http',
     'version': '0.3.2',
      'classifiers': [
         # How mature is this project? Common values are

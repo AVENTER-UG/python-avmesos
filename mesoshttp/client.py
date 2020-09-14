@@ -44,12 +44,13 @@ class MesosClient(object):
         `MesosClient.SchedulerDriver` instance is available after the
         SUBSCRIBED event with the subscribed event.
         '''
-        def __init__(self, mesos_url, frameworkId, streamId, requests_auth=None, verify=True):
+        def __init__(self, mesos_url, frameworkId, streamId, requests_auth=None, verify=False):
             '''
             Create a driver instance related to created framework
             '''
             CoreMesosObject.__init__(self, mesos_url, frameworkId, streamId, requests_auth, verify)
             self.driver = None
+            self.verify = False
 
         def tearDown(self):
             '''
@@ -379,7 +380,7 @@ class MesosClient(object):
         self.master_info = None
         self.disconnected = False
         self.requests_auth = None
-        self.verify = True
+        self.verify = False
 
     def set_credentials(self, principal, secret):
         '''
@@ -414,7 +415,7 @@ class MesosClient(object):
             if response.status_code == 200:
                 with open(cert_file, 'w') as cert:
                     cert.write(response.text)
-        self.verify = cert_file
+#        self.verify = cert_file
 
     def tearDown(self):
         '''
