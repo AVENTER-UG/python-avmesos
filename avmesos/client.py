@@ -658,7 +658,7 @@ class MesosClient(object):
                     if zk_url is None:
                         raise Exception('Could not detect master in zookeeper')
                     self.mesos_url = zk_url
-                self.logger.warn(
+                self.logger.warning(
                     'Try to connect to master: %s' % (self.mesos_url)
                 )
 
@@ -796,7 +796,7 @@ class MesosClient(object):
                 elif body['type'] == 'HEARTBEAT':
                     self.logger.debug('Mesos:Heartbeat')
                 else:
-                    self.logger.warn(
+                    self.logger.warning(
                         '%s event no yet implemented' % (str(body['type']))
                     )
 
@@ -860,7 +860,7 @@ class MesosClient(object):
         elif body['type'] == 'HEARTBEAT':
             self.logger.debug('Mesos:Heartbeat')
         else:
-            self.logger.warn(
+            self.logger.warning(
                 '%s event no yet implemented' % (str(body['type']))
             )    
 
