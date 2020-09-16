@@ -25,7 +25,7 @@ config = {
     'author': 'AVENTER UG (haftungsbeschraenkt)',
     'author_email': 'support@aventer.biz',
     'download_url': 'https://git.aventer.biz/AVENTER/python-mesos-http',
-    'version': '0.3.3',
+    'version': '0.3.4',
      'classifiers': [
         # How mature is this project? Common values are
         #   3 - Alpha
