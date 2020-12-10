@@ -5,7 +5,7 @@ import jwt
 import requests
 from requests.auth import AuthBase
 
-from mesoshttp.exception import ACSException
+from avmesos.exception import ACSException
 
 
 class DCOSServiceAuth(AuthBase):

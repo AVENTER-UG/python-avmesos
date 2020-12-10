@@ -7,12 +7,11 @@ import sys
 import requests
 from requests.exceptions import ConnectionError
 
-from mesoshttp.acs import DCOSServiceAuth
-
-from mesoshttp.offers import Offer
-from mesoshttp.core import CoreMesosObject
-from mesoshttp.exception import MesosException
-from mesoshttp.update import Update
+from avmesos.acs import DCOSServiceAuth
+from avmesos.offers import Offer
+from avmesos.core import CoreMesosObject
+from avmesos.exception import MesosException
+from avmesos.update import Update
 
 from kazoo.client import KazooClient
 
@@ -44,12 +43,13 @@ class MesosClient(object):
         `MesosClient.SchedulerDriver` instance is available after the
         SUBSCRIBED event with the subscribed event.
         '''
-        def __init__(self, mesos_url, frameworkId, streamId, requests_auth=None, verify=True):
+        def __init__(self, mesos_url, frameworkId, streamId, requests_auth=None, verify=False):
             '''
             Create a driver instance related to created framework
             '''
             CoreMesosObject.__init__(self, mesos_url, frameworkId, streamId, requests_auth, verify)
             self.driver = None
+            self.verify = False
 
         def tearDown(self):
             '''
@@ -317,12 +317,14 @@ class MesosClient(object):
     def __init__(
             self,
             mesos_urls,
+            thread=True,
             frameworkId=None,
             frameworkName='Mesos HTTP framework',
             frameworkUser='root',
             frameworkHostname='',
             frameworkWebUI='',
-            max_reconnect=3):
+            max_reconnect=3,
+            connection_timeout=None):
         '''
         Create a frameworkId
 
@@ -340,6 +342,8 @@ class MesosClient(object):
         :type frameworkWebUI: str
         :param max_reconnect: number of reconnection retries when connection fails
         :type max_reconnect: int  defaults to 3
+        :param connection_timeout: sets a timeout for scheduler connection loop
+        :type connection_timeout: defaults to None (no timeout)
         '''
         self.frameworkId = frameworkId
         self.frameworkName = frameworkName
@@ -354,6 +358,7 @@ class MesosClient(object):
         self.streamId = None
         self.logger = logging.getLogger(__name__)
         self.stop = False
+        self.thread = thread
         self.disconnect = False
         self.callbacks = {
             MesosClient.SUBSCRIBED: [],
@@ -370,12 +375,13 @@ class MesosClient(object):
         self.secret = None
         self.long_pool = None
         self.failover_timeout = None
+        self.connection_timeout = connection_timeout
         self.checkpoint = True
         self.capabilities = []
         self.master_info = None
         self.disconnected = False
         self.requests_auth = None
-        self.verify = True
+        self.verify = False
 
     def set_credentials(self, principal, secret):
         '''
@@ -410,7 +416,7 @@ class MesosClient(object):
             if response.status_code == 200:
                 with open(cert_file, 'w') as cert:
                     cert.write(response.text)
-        self.verify = cert_file
+#        self.verify = cert_file
 
     def tearDown(self):
         '''
@@ -602,7 +608,6 @@ class MesosClient(object):
         return mesos_master
 
     def __register(self):
-        python_version = sys.version_info.major
         headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
@@ -653,18 +658,31 @@ class MesosClient(object):
                     if zk_url is None:
                         raise Exception('Could not detect master in zookeeper')
                     self.mesos_url = zk_url
-                self.logger.warn(
+                self.logger.warning(
                     'Try to connect to master: %s' % (self.mesos_url)
                 )
-                self.long_pool = requests.post(
-                    self.mesos_url + '/api/v1/scheduler',
-                    json.dumps(subscribe),
-                    stream=True,
-                    headers=headers,
-                    verify=self.verify,
-                    auth=self.requests_auth
 
-                )
+                if self.connection_timeout is not None:
+                    self.logger.debug("connection timeout set")
+                    self.long_pool = requests.post(
+                        self.mesos_url + '/api/v1/scheduler',
+                        json.dumps(subscribe),
+                        stream=True,
+                        headers=headers,
+                        verify=self.verify,
+                        auth=self.requests_auth,
+                        timeout=self.connection_timeout
+                    )
+                else:
+                    self.long_pool = requests.post(
+                        self.mesos_url + '/api/v1/scheduler',
+                        json.dumps(subscribe),
+                        stream=True,
+                        headers=headers,
+                        verify=self.verify,
+                        auth=self.requests_auth
+                    )
+
                 self.logger.debug("Subscribe HTTP answer: " + str(self.long_pool.status_code))
                 if self.long_pool.status_code == 307:
                     # Not leader, reconnect to leader
@@ -703,6 +721,14 @@ class MesosClient(object):
             self.__event_reconnected()
             self.disconnected = False
 
+        if self.thread == True:
+            self.__event_loop()
+        
+        if self.thread == False:
+            self.__event_single()
+
+    def __event_loop(self):
+        python_version = sys.version_info.major        
         first_line = True
         for line in self.long_pool.iter_lines():
             if self.stop or self.disconnect:
@@ -770,12 +796,74 @@ class MesosClient(object):
                 elif body['type'] == 'HEARTBEAT':
                     self.logger.debug('Mesos:Heartbeat')
                 else:
-                    self.logger.warn(
+                    self.logger.warning(
                         '%s event no yet implemented' % (str(body['type']))
                     )
 
                 if line[count_bytes:]:
                     count_bytes = int(line[count_bytes:])
+        return True
+
+    def __event_single(self):
+        python_version = sys.version_info.major        
+        body = self.long_pool.json()
+
+        self.logger.debug('Mesos:Event:%s' % (str(body['type'])))
+        self.logger.debug('Mesos:Message:' + str(body))
+        if body['type'] == 'SUBSCRIBED':
+            self.frameworkId = body['subscribed']['framework_id']['value']
+            self.logger.info(
+                'Mesos:Subscribe:Framework-Id:' + self.frameworkId
+            )
+            self.logger.info(
+                'Mesos:Subscribe:Stream-Id:' + self.streamId
+            )
+            if 'master_info' in body['subscribed']:
+                self.master_info = body['subscribed']['master_info']
+            self.__event_subscribed()
+        elif body['type'] == 'OFFERS':
+            mesos_offers = body['offers']['offers']
+            offers = []
+            for mesos_offer in mesos_offers:
+                offers.append(
+                    Offer(
+                        self.mesos_url,
+                        frameworkId=self.frameworkId,
+                        streamId=self.streamId,
+                        mesosOffer=mesos_offer,
+                        requests_auth=self.requests_auth,
+                        verify=self.verify
+                    )
+                )
+            self.__event_offers(offers)
+        elif body['type'] == 'UPDATE':
+            mesos_update = body['update']
+            update_event = Update(
+                self.mesos_url,
+                frameworkId=self.frameworkId,
+                streamId=self.streamId,
+                mesosUpdate=mesos_update,
+                requests_auth=self.requests_auth,
+                verify=self.verify 
+            )
+            update_event.ack()
+            self.__event_update(mesos_update)
+        elif body['type'] == 'ERROR':
+            self.logger.error('Mesos:Error:' + body['error']['message'])
+            self.__event_error(body['error']['message'])
+        elif body['type'] == 'RESCIND':
+            self.__event_callback(body['type'], body['rescind'])
+        elif body['type'] == 'MESSAGE':
+            self.__event_callback(body['type'], body['message'])
+        elif body['type'] == 'FAILURE':
+            self.__event_callback(body['type'], body['failure'])
+        elif body['type'] == 'HEARTBEAT':
+            self.logger.debug('Mesos:Heartbeat')
+        else:
+            self.logger.warning(
+                '%s event no yet implemented' % (str(body['type']))
+            )    
+
         return True
 
     def combine_offers(self, offers, operations, options=None):

@@ -3,8 +3,8 @@ import json
 
 import requests
 
-from mesoshttp.core import CoreMesosObject
-from mesoshttp.exception import MesosException
+from avmesos.core import CoreMesosObject
+from avmesos.exception import MesosException
 
 
 class Offer(CoreMesosObject):
