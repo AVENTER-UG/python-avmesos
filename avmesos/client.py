@@ -52,6 +52,30 @@ class MesosClient(object):
             self.driver = None
             self.verify = False
 
+        def suppress(self):
+            '''
+            suppress framework
+            '''
+            headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'Mesos-Stream-Id': self.streamId
+            }
+            suppress = {
+                "framework_id": {"value": self.frameworkId},
+                "type": "SUPPRESS"
+            }
+            try:
+                requests.post(
+                    self.mesos_url + '/api/v1/scheduler',
+                    json.dumps(suppress),
+                    headers=headers,
+                    auth=self.requests_auth,
+                    verify=self.verify
+                )
+            except Exception as e:
+                self.logger.error('Mesos:Suppress:Error:' + str(e))
+
         def tearDown(self):
             '''
             Undeclare framework
@@ -792,6 +816,7 @@ class MesosClient(object):
                     update_event.ack()
                     self.__event_update(mesos_update)
                 elif body['type'] == 'HEARTBEAT':
+                    self.logger.debug('Mesos:Heartbeat')
                     self.__event_heartbeat(body['type'])
                 elif body['type'] == 'ERROR':
                     self.logger.error('Mesos:Error:' + body['error']['message'])
@@ -802,8 +827,6 @@ class MesosClient(object):
                     self.__event_callback(body['type'], body['message'])
                 elif body['type'] == 'FAILURE':
                     self.__event_callback(body['type'], body['failure'])
-                elif body['type'] == 'HEARTBEAT':
-                    self.logger.debug('Mesos:Heartbeat')
                 else:
                     self.logger.warning(
                         '%s event no yet implemented' % (str(body['type']))
@@ -868,6 +891,7 @@ class MesosClient(object):
             self.__event_callback(body['type'], body['failure'])
         elif body['type'] == 'HEARTBEAT':
             self.logger.debug('Mesos:Heartbeat')
+            self.__event_heartbeat(body['type'])
         else:
             self.logger.warning(
                 '%s event no yet implemented' % (str(body['type']))

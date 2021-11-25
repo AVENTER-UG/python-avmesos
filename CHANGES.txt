@@ -1,5 +1,6 @@
 0.4.0:
     Add heatbeat support
+    Add suppress support
 0.3.2:
     Fix that breaks code PR #9
 0.3.1:
