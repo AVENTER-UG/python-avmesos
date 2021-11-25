@@ -480,8 +480,8 @@ class MesosClient(object):
     def __event_subscribed(self):
         return self.__event_callback(MesosClient.SUBSCRIBED, self.get_driver())
 
-    def __event_heartbeat(self):
-        return self.__event_callback(MesosClient.HEARTBEAT)
+    def __event_heartbeat(self, heartbeat):
+        return self.__event_callback(MesosClient.HEARTBEAT, heartbeat)
 
     def __event_disconnected(self):
         return self.__event_callback(MesosClient.DISCONNECTED, 'mesos master disconnected')
