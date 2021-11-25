@@ -24,8 +24,8 @@ config = {
     'description': 'Mesos HTTP lib',
     'author': 'AVENTER UG (haftungsbeschraenkt)',
     'author_email': 'support@aventer.biz',
-    'download_url': 'https://git.aventer.biz/AVENTER/python-mesos-http',
-    'version': '0.3.4',
+    'download_url': 'https://github.com/AVENTER-UG/python-avmesos',
+    'version': '0.4.0',
      'classifiers': [
         # How mature is this project? Common values are
         #   3 - Alpha
