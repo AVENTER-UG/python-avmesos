@@ -792,6 +792,7 @@ class MesosClient(object):
                     mesos_offers = body['offers']['offers']
                     offers = []
                     for mesos_offer in mesos_offers:
+                        self.logger.debug('Mesos:GetOffer:%s' % (str(mesos_offers)))
                         offers.append(
                             Offer(
                                 self.mesos_url,
