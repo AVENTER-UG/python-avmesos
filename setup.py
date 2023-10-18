@@ -25,7 +25,7 @@ config = {
     'author': 'AVENTER UG (haftungsbeschraenkt)',
     'author_email': 'support@aventer.biz',
     'download_url': 'https://github.com/AVENTER-UG/python-avmesos',
-    'version': '0.4.0',
+    'version': '0.4.2',
      'classifiers': [
         # How mature is this project? Common values are
         #   3 - Alpha

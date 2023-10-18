@@ -4,7 +4,7 @@ import threading
 import logging
 import uuid
 
-from mesoshttp.client import MesosClient
+from avmesos.client import MesosClient
 
 class Test(object):
 
@@ -26,7 +26,7 @@ class Test(object):
     def __init__(self):
         logging.basicConfig()
         self.logger = logging.getLogger(__name__)
-        logging.getLogger('mesoshttp').setLevel(logging.DEBUG)
+        logging.getLogger('avmesos').setLevel(logging.DEBUG)
         
         self.driver = None
         # Note: leader.mesos address requires Mesos DNS
